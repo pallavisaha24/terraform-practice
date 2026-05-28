@@ -57,20 +57,28 @@ resource aws_security_group my_security_group{
 # ec2 instance
 
 resource "aws_instance" "my_instance" {
+    for_each = tomap({
+        TWS-automate-micro = "t2.micro"
+        TWS-automate-medium = "t2.medium"
+    }) # meta argument 
+    
+    depends_on = [ aws_security_group.my_security_group, aws_key_pair.deployer] #meta argument, If the security group, key pair are not created the Instance will nnot get created. 
+    
+    #count = 2 #count is a meta argument, this will create 2 instances 
     key_name = aws_key_pair.deployer.key_name
     security_groups = [aws_security_group.my_security_group.name]
-    instance_type = var.ec2_instance_type
+    instance_type = each.value
     ami = var.ec2_ami_id #ubuntu
     user_data = file("install_nginx.sh") # aollows you to run shell script at startup
 
     root_block_device {
-      volume_size = var.ec2_root_storage_size
+      volume_size = var.env == "prd" ? 20 : var.ec2_default_root_storage_size
       volume_type = "gp3"
 
     }
 
     tags = {
-        Name = "TWS-Junoon-automate"
+        Name = each.key
     }
   
 }
